@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { hasNextElementSibling } from '../DomUtils/elementPositionInRow';
 import {
+
   focusNextElementSibling,
-  focusPrevElementSibling
+  focusPrevElementSibling,
 } from '../DomUtils/focusElement';
 import { getActiveElement } from '../DomUtils/getActiveElement';
 import {
@@ -12,7 +13,7 @@ import {
   focusNextVisibleEmoji,
   focusPrevVisibleEmoji,
   focusVisibleEmojiOneRowDown,
-  focusVisibleEmojiOneRowUp
+  focusVisibleEmojiOneRowUp,
 } from '../DomUtils/keyboardNavigation';
 import { useScrollTo } from '../DomUtils/scrollTo';
 import { buttonFromTarget } from '../DomUtils/selectors';
@@ -20,6 +21,7 @@ import {
   useBodyRef,
   useCategoryNavigationRef,
   usePickerMainRef,
+  useReactionsRef,
   useSearchInputRef,
   useSkinTonePickerRef
 } from '../components/context/ElementRefContext';
@@ -60,6 +62,7 @@ export function useKeyboardNavigation() {
   useSkinTonePickerKeyboardEvents();
   useCategoryNavigationKeyboardEvents();
   useBodyKeyboardEvents();
+  useReactionsNavigationKeybordsEvents();
 }
 
 function usePickerMainKeyboardEvents() {
@@ -270,6 +273,7 @@ function useSkinTonePickerKeyboardEvents() {
 
 function useCategoryNavigationKeyboardEvents() {
   const focusSearchInput = useFocusSearchInput();
+
   const CategoryNavigationRef = useCategoryNavigationRef();
   const BodyRef = useBodyRef();
   const onType = useOnType();
@@ -318,6 +322,62 @@ function useCategoryNavigationKeyboardEvents() {
     };
   }, [CategoryNavigationRef, BodyRef, onKeyDown]);
 }
+
+
+// New hook for reactions mode
+function useReactionsNavigationKeybordsEvents() {
+  const ReactionsNavigationRef = useReactionsRef();
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+
+  const onKeyDown = useMemo(
+    () =>
+      function onKeyDown(event: KeyboardEvent) {
+        const { key } = event;
+        const current = ReactionsNavigationRef.current;
+        if (!current) return;
+
+        const elements = current.querySelectorAll<HTMLElement>('[role="button"]');
+        switch (key) {
+          case KeyboardEvents.ArrowDown:
+            event.preventDefault();
+            elements[currentIndex].focus();
+            break;
+          case KeyboardEvents.ArrowRight: {
+            event.preventDefault();
+            const nextIndex = (currentIndex + 1) % elements.length;
+            setCurrentIndex(nextIndex);
+            elements[nextIndex].focus();
+            break;
+          }
+          case KeyboardEvents.ArrowLeft: {
+            event.preventDefault();
+            const prevIndex = (currentIndex - 1 + elements.length) % elements.length;
+            setCurrentIndex(prevIndex);
+            elements[prevIndex].focus();
+            break;
+          }
+          default:
+            break;
+        }
+      },
+    [ReactionsNavigationRef, currentIndex]
+  );
+
+  useEffect(() => {
+    const current = ReactionsNavigationRef.current;
+    if (!current) {
+      return;
+    }
+
+    current.addEventListener('keydown', onKeyDown);
+    return () => {
+      current.removeEventListener('keydown', onKeyDown);
+    };
+  }, [ReactionsNavigationRef, onKeyDown]);
+}
+
+
+
 
 function useBodyKeyboardEvents() {
   const BodyRef = useBodyRef();
@@ -471,7 +531,6 @@ function useOnType() {
     }
   };
 }
-
 function hasModifier(event: KeyboardEvent): boolean {
   const { metaKey, ctrlKey, altKey } = event;
 

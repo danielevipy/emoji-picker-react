@@ -6,10 +6,11 @@ import {
   MOUSE_EVENT_SOURCE,
   useEmojiStyleConfig,
   useReactionsConfig,
-  useAllowExpandReactions
+  useAllowExpandReactions,
 } from '../../config/useConfig';
 import { DataEmoji } from '../../dataUtils/DataTypes';
 import { emojiByUnified } from '../../dataUtils/emojiSelectors';
+import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
 import { useMouseDownHandlers } from '../../hooks/useMouseDownHandlers';
 import { useReactionsRef } from '../context/ElementRefContext';
 import { useReactionsModeState } from '../context/PickerContext';
@@ -25,6 +26,9 @@ export function Reactions() {
   const emojiStyle = useEmojiStyleConfig();
   const allowExpandReactions = useAllowExpandReactions();
 
+  // Attach the keyboard navigation hook
+  useKeyboardNavigation();
+
   if (!reactionsOpen) {
     return null;
   }
@@ -34,22 +38,26 @@ export function Reactions() {
       className={cx(styles.list, !reactionsOpen && commonStyles.hidden)}
       ref={ReactionsRef}
     >
-      {reactions.map(reaction => (
-        <li key={reaction}>
+      {reactions.map((reaction) => (
+        <div
+          key={reaction}
+          role="button"
+          tabIndex={0}
+          className={cx(styles.emojiButton)}
+        >
           <ClickableEmoji
             emoji={emojiByUnified(reaction) as DataEmoji}
             emojiStyle={emojiStyle}
             unified={reaction}
             showVariations={false}
-            className={cx(styles.emojiButton)}
             noBackground
           />
-        </li>
+        </div>
       ))}
       {allowExpandReactions ? (
-        <li>
+        <div role="button" tabIndex={0}>
           <BtnPlus />
-        </li>
+        </div>
       ) : null}
     </ul>
   );
@@ -63,18 +71,18 @@ const styles = stylesheet.create({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    height: '100%'
+    height: '100%',
   },
   emojiButton: {
     ':hover': {
-      transform: 'scale(1.2)'
+      transform: 'scale(1.2)',
     },
     ':focus': {
-      transform: 'scale(1.2)'
+      transform: 'scale(1.2)',
     },
     ':active': {
-      transform: 'scale(1.1)'
+      transform: 'scale(1.1)',
     },
-    transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.5)'
-  }
+    transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.5)',
+  },
 });
